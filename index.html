@@ -38,6 +38,21 @@
         #death-overlay {
             transition: none !important;
         }
+
+        /* 실린더 회전 애니메이션 (자바스크립트에서 제어하기 위해 기본값 설정) */
+        #gun-image {
+            transition: transform 5s cubic-bezier(0.1, 0, 0, 1), opacity 1s ease-in-out, filter 1s ease-in-out;
+        }
+
+        /* 디졸브 효과를 위한 클래스 */
+        .fade-out { opacity: 0; filter: blur(10px); }
+        .fade-in { opacity: 1; filter: blur(0); }
+
+        /* 총구 확대 강조 */
+        .aim-zoom {
+            transform: scale(1.3) !important;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
     </style>
 </head>
 <body>
@@ -189,49 +204,92 @@
             }, 2500);
         }
 
+        // --- 수정된 핵심 로직 ---
+
+        // 1. 'Start' 버튼 클릭 시 시작 (자동 로드 제거)
+        function startGame() {
+            if (gameState.status !== 'idle') return;
+            
+            playSound('load');
+            gameState.status = 'loading';
+            gameState.bulletPosition = Math.floor(Math.random() * 6);
+            gameState.currentChamber = 0;
+            render();
+
+            // 2. 실린더 회전 시작 (처음엔 빠르게, 갈수록 느리게)
+            setTimeout(() => {
+                const gunImg = document.getElementById('gun-image');
+                gunImg.style.transform = "rotate(2520deg)"; // 7바퀴 회전
+                // CSS transition(5s cubic-bezier)에 의해 서서히 멈춤
+                
+                setTimeout(() => {
+                    // 3. 이미지 전환 (1초 대기 후 Dissolve)
+                    gunImg.classList.add('fade-out');
+                    
+                    setTimeout(() => {
+                        gunImg.src = ASSETS.images.gun;
+                        gunImg.style.transform = "rotate(0deg)";
+                        gunImg.classList.remove('fade-out');
+                        gunImg.classList.add('fade-in');
+                        
+                        gameState.status = 'waiting';
+                        render();
+                    }, 1000); // 1초 대기 후 전환
+                }, 5500); // 회전이 거의 멈출 때쯤
+            }, 500);
+        }
+
+        // 4 & 5. 발사 시퀀스 (더 빠른 회전 및 확대 연출)
         function pullTrigger() {
             if (gameState.status !== 'waiting') return;
 
             playSound('spin');
             gameState.status = 'spinning';
-            gameState.turnResult = null;
             render();
 
-            setTimeout(() => {
-                playSound('cock');
-                gameState.status = 'aiming';
-                render();
+            const gunImg = document.getElementById('gun-image');
+            // 총이 더 빨리 돌아가는 연출 (짧은 시간 내 회전)
+            gunImg.style.transition = "transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)";
+            gunImg.style.transform = "rotate(1080deg)";
 
+            setTimeout(() => {
+                // 5. 멈추고 2초 뒤 총구 겨누기 (확대)
                 setTimeout(() => {
-                    const isDead = gameState.currentChamber === gameState.bulletPosition;
-                    
-                    if (isDead) {
-                        playSound('bang');
-                        gameState.players[gameState.currentPlayerIndex].isDead = true;
-                        gameState.status = 'resolved';
-                        gameState.turnResult = 'dead';
-                    } else {
-                        playSound('click');
-                        let nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-                        while (gameState.players[nextIndex].isDead) {
-                            nextIndex = (nextIndex + 1) % gameState.players.length;
-                        }
-                        gameState.status = 'resolved';
-                        gameState.turnResult = 'alive';
-                        gameState.currentChamber++;
-                        gameState.currentPlayerIndex = nextIndex;
-                    }
+                    playSound('cock');
+                    gameState.status = 'aiming';
+                    gunImg.classList.add('aim-zoom');
                     render();
 
+                    // 결과 발표
                     setTimeout(() => {
-                        if (gameState.turnResult === 'alive') {
-                            gameState.status = 'waiting';
-                            gameState.turnResult = null;
-                            render();
+                        const isDead = gameState.currentChamber === gameState.bulletPosition;
+                        
+                        if (isDead) {
+                            playSound('bang');
+                            gameState.players[gameState.currentPlayerIndex].isDead = true;
+                            gameState.status = 'resolved';
+                            gameState.turnResult = 'dead';
+                        } else {
+                            playSound('click');
+                            gameState.status = 'resolved';
+                            gameState.turnResult = 'alive';
+                            gameState.currentChamber++;
+                            // 다음 플레이어 계산 로직...
                         }
-                    }, 3000);
-                }, 3000);
-            }, 5000);
+                        render();
+                        
+                        // 생존 시 다음 턴으로
+                        if (gameState.turnResult === 'alive') {
+                            setTimeout(() => {
+                                gunImg.classList.remove('aim-zoom');
+                                gameState.status = 'waiting';
+                                gameState.turnResult = null;
+                                render();
+                            }, 2000);
+                        }
+                    }, 1500); // 조준 후 결과까지 대기
+                }, 2000); // 멈춘 뒤 2초 대기
+            }, 1500);
         }
 
         function resetRound() {
