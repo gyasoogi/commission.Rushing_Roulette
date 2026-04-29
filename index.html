@@ -6,73 +6,90 @@
     <title>VIP ROULETTE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;800&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #050505;
+            background-color: #030303;
             color: white;
             margin: 0;
             overflow: hidden;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        img {
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            pointer-events: none;
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
 
-        /* 애니메이션 정의 */
         @keyframes custom-spin {
             0% { transform: rotate(0deg); }
-            100% { transform: rotate(2160deg); }
-        }
-        .animate-spin-fast {
-            animation: custom-spin 2.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .animate-spin-slow {
-            animation: custom-spin 5s cubic-bezier(0.2, 0, 0.8, 1);
+            100% { transform: rotate(3600deg); }
         }
         
-        .hidden { display: none !important; }
-        
-        /* 사망 연출 트랜지션 제거 */
-        #death-overlay {
-            transition: none !important;
+        .animate-spin-decelerate {
+            animation: custom-spin 3.5s cubic-bezier(0.15, 0, 0.15, 1) forwards;
         }
 
-        /* 실린더 회전 애니메이션 (자바스크립트에서 제어하기 위해 기본값 설정) */
+        #aiming-image { transition: opacity 0.6s ease-in-out; }
+        .aiming-show { opacity: 1 !important; }
+
+        .zoom-in { transform: scale(1.3) translateY(-10px); }
+        .zoom-out { transform: scale(1) translateY(0); }
+
         #gun-image {
-            transition: transform 5s cubic-bezier(0.1, 0, 0, 1), opacity 1s ease-in-out, filter 1s ease-in-out;
+            transition: opacity 0.8s ease-in-out, 
+                        transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                        filter 0.8s ease-in-out; 
+            transform-origin: center center;
+            will-change: transform, opacity, filter;
         }
 
-        /* 디졸브 효과를 위한 클래스 */
-        .fade-out { opacity: 0; filter: blur(10px); }
-        .fade-in { opacity: 1; filter: blur(0); }
+        .cylinder-idle { opacity: 0.3; filter: grayscale(100%) brightness(0.6); }
+        .cylinder-active { opacity: 1; filter: grayscale(0%) brightness(1) drop-shadow(0 0 20px rgba(255,0,0,0.1)); }
 
-        /* 총구 확대 강조 */
-        .aim-zoom {
-            transform: scale(1.3) !important;
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        .fade-out { opacity: 0 !important; }
+        .gun-dimmed { opacity: 0.8 !important; }
+
+        #death-overlay { transition: none !important; }
+
+        .noise-bg {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
         }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
 
-    <div id="login-screen" class="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40rem] h-[40rem] bg-red-900/10 rounded-full blur-[120px] pointer-events-none"></div>
-        <div class="relative z-10 w-full max-w-md bg-[#0f0f13]/80 backdrop-blur-2xl border border-white/5 rounded-3xl p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+    <div id="login-screen" class="min-h-screen bg-[#030303] noise-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[50rem] bg-gradient-to-tr from-red-900/5 to-amber-900/5 rounded-full blur-[100px] pointer-events-none"></div>
+        
+        <div class="relative z-10 w-full max-w-sm bg-[#0a0a0c]/80 backdrop-blur-3xl border border-white/20 rounded-2xl p-12 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
             <div class="text-center mb-10">
-                <h2 class="text-[#d4af37] text-xs tracking-[0.3em] font-bold mb-2 uppercase opacity-80">VIP Lounge</h2>
-                <h1 class="text-4xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-red-600 to-red-800">
+                <h2 class="text-[#d43737] text-[9px] tracking-[0.4em] font-light mb-4 uppercase opacity-70">VIP Lounge</h2>
+                <h1 class="text-3xl font-light tracking-[0.2em] text-white">
                     ROULETTE
                 </h1>
             </div>
             <div class="space-y-8">
-                <input type="text" id="nickname-input" class="w-full bg-black/40 border-b-2 border-white/10 text-white px-4 py-3 outline-none focus:border-red-600 transition-colors text-center text-lg" placeholder="Enter Nickname" maxlength="10">
-                <div class="flex flex-col gap-4">
-                    <button onclick="handleJoin('player')" class="group relative w-full bg-gradient-to-r from-red-900 to-red-950 border border-red-500/30 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-red-500/20 transition-all">
-                        <span class="tracking-widest uppercase">Join as Player</span>
+                <div class="relative">
+                    <input type="text" id="nickname-input" class="w-full bg-white/[0.03] border border-white/10 rounded-lg text-white px-4 py-3.5 outline-none focus:border-[#9e9e9e]/50 focus:bg-white/[0.05] transition-all text-center text-sm font-light tracking-widest placeholder-white/20 shadow-inner" placeholder="ENTER NICKNAME" maxlength="10">
+                </div>
+                <div class="flex flex-col gap-3">
+                    <button onclick="handleJoin('player')" class="w-full bg-white text-black hover:bg-gray-200 font-semibold py-3.5 rounded-lg transition-all tracking-[0.15em] text-xs uppercase shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                        Join Game
                     </button>
-                    <button onclick="handleJoin('spectator')" class="w-full bg-transparent border border-white/10 hover:bg-white/5 text-gray-400 font-bold py-3 rounded-xl transition-all tracking-widest uppercase text-sm">
+                    <button onclick="handleJoin('spectator')" class="w-full bg-transparent border border-white/25 hover:bg-white/10 text-gray-300 font-light py-3 rounded-lg transition-all tracking-[0.15em] uppercase text-xs">
                         Spectate
                     </button>
                 </div>
@@ -80,67 +97,60 @@
         </div>
     </div>
 
-    <div id="game-screen" class="hidden min-h-screen flex flex-col relative overflow-hidden">
-        <div class="fixed inset-0 bg-[radial-gradient(circle_at_center,_#1a0f0f_0%,_#050505_100%)] pointer-events-none"></div>
+    <div id="game-screen" class="hidden h-[100dvh] w-full relative overflow-hidden bg-[#030303] noise-bg">
+        <div class="fixed inset-0 bg-[radial-gradient(circle_at_center,_#0a0808_0%,_#030303_100%)] pointer-events-none"></div>
 
-        <header class="relative z-50 w-full p-6 flex justify-between items-start pointer-events-none">
-            <div class="w-56 sm:w-72 bg-[#0f0f13]/60 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-2xl pointer-events-auto">
-                <div class="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
-                    <span class="text-[#d4af37] text-xs font-bold tracking-[0.2em] uppercase">Players</span>
-                    <span class="text-red-400 text-[10px] px-2 py-1 border border-red-500/20 rounded">ONLINE</span>
+        <header class="absolute top-6 left-6 right-6 z-50 flex justify-between items-start pointer-events-none">
+        <div class="w-[280px] bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/[0.05] rounded-3xl p-5 shadow-2xl pointer-events-auto">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-white/40 text-[10px] font-light tracking-[0.3em] uppercase">Roster</span>
                 </div>
-                <ul id="player-list" class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
-                    </ul>
+                <div class="w-1.5 h-1.5 rounded-full bg-white/60 shadow-[0_0_8px_#ffffff]"></div>
             </div>
-            <div class="bg-[#0f0f13]/60 backdrop-blur-xl border border-white/5 rounded-full px-5 py-2.5 flex items-center gap-3 pointer-events-auto">
-                <span id="my-role" class="text-gray-500 text-[10px] uppercase tracking-widest"></span>
-                <span id="my-name" class="font-bold text-gray-200 text-sm tracking-wider"></span>
-            </div>
-        </header>
+            <ul id="player-list" class="space-y-2 max-h-[30vh] overflow-y-auto custom-scrollbar pr-2 text-sm"></ul>
+        </div>
 
-        <main class="relative z-10 flex-1 flex flex-col items-center justify-center -mt-10">
-            <div id="status-container" class="h-20 mb-8 flex items-end justify-center text-center">
+        <div class="bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/[0.05] rounded-full px-6 py-3 flex items-center gap-3 pointer-events-auto shadow-2xl">
+            <span class="text-[#9e9e9e] text-[10px] uppercase tracking-[0.2em] font-light mr-2">CHAMBERS</span>
+            <div id="bullet-indicator" class="flex items-center gap-2"></div>
+        </div>
+    </header>
+
+        <main class="relative z-10 w-full h-full flex flex-col items-center justify-center p-4 overflow-hidden">
+            <div class="w-full flex flex-col items-center translate-y-[7vh]">
+                <div id="status-container" class="min-h-[4rem] flex items-center justify-center text-center px-4 w-full mb-4"></div>
+
+                <div class="relative w-[45vmin] h-[45vmin] max-w-[320px] max-h-[320px] flex items-center justify-center transition-all duration-700 shrink-0">
+                    <div class="absolute inset-0 bg-white/[0.02] rounded-full blur-2xl mix-blend-screen pointer-events-none"></div>
+                    <img id="gun-image" src="assets/images/cylinder.png" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]" alt="Gun">
+                    <img id="aiming-image" src="assets/images/aim.png" class="absolute w-[120%] h-[120%] object-contain opacity-0 pointer-events-none transition-opacity duration-700">
                 </div>
 
-            <div class="relative w-72 h-72 sm:w-96 sm:h-96 flex items-center justify-center">
-                <div class="absolute inset-0 bg-white/5 rounded-full blur-3xl mix-blend-screen"></div>
-                <img id="gun-image" src="assets/images/cylinder.png" class="w-full h-full object-contain transition-all duration-300 opacity-50 grayscale" alt="Gun">
+                <div id="control-area" class="min-h-[6rem] flex items-center justify-center w-full px-6 mt-4"></div>
             </div>
-
-            <div id="control-area" class="h-32 mt-12 flex items-center justify-center">
-                </div>
         </main>
 
-        <div id="death-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none bg-black/90">
-            <div id="blood-splatter" class="absolute inset-0 overflow-hidden mix-blend-multiply"></div>
-            <div class="relative z-10 text-[20vw] leading-none font-black text-red-600 tracking-tighter drop-shadow-[0_0_80px_rgba(220,38,38,1)]" style="-webkit-text-stroke: 2px #ff0000">
-                BANG!
-            </div>
-            <div class="relative z-10 mt-4 text-2xl text-white font-bold tracking-[0.5em] uppercase opacity-80">
-                Player Eliminated
+        <div id="death-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none bg-[#030303]/95 backdrop-blur-sm">
+            <div id="blood-splatter" class="absolute inset-0 overflow-hidden mix-blend-multiply opacity-60"></div>
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-20 h-[1px] bg-red-600/50 mb-6"></div>
+                <h1 id="eliminated-text" class="text-[5.5rem] font-light text-red-600 tracking-[0.2em] uppercase mb-4" style="text-shadow: 0 0 40px rgba(220,38,38,0.3); font-variant-numeric: tabular-nums;">
+                </h1>
+                <div class="w-20 h-[1px] bg-red-600/50 mt-2"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 설정 및 상태 ---
         const ASSETS = {
-            images: {
-                gun: 'assets/images/gun.png',
-                cylinder: 'assets/images/cylinder.png'
-            },
-            sounds: {
-                load: 'assets/sounds/load.mp3',
-                spin: 'assets/sounds/spin.mp3',
-                cock: 'assets/sounds/cock.mp3',
-                click: 'assets/sounds/click.mp3',
-                bang: 'assets/sounds/bang.mp3'
-            }
+            images: { gun: 'assets/images/gun.png', cylinder: 'assets/images/cylinder.png' },
+            sounds: { load: 'assets/sounds/load.mp3', spin: 'assets/sounds/spin.mp3', cock: 'assets/sounds/cock.mp3', click: 'assets/sounds/click.mp3', bang: 'assets/sounds/bang.mp3' }
         };
 
         let me = null;
         let gameState = {
-            status: 'idle', // idle, loading, waiting, spinning, aiming, resolved
+            status: 'idle', 
             players: [],
             currentPlayerIndex: 0,
             bulletPosition: 0,
@@ -149,97 +159,95 @@
         };
 
         const audios = {};
-        Object.entries(ASSETS.sounds).forEach(([key, url]) => {
-            audios[key] = new Audio(url);
-        });
+        Object.entries(ASSETS.sounds).forEach(([key, url]) => { audios[key] = new Audio(url); });
 
         function playSound(type) {
             const sound = audios[type];
-            if (sound && ASSETS.sounds[type]) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.log("Audio play blocked"));
-            }
+            if (sound) { sound.currentTime = 0; sound.play().catch(e => console.log("Audio play blocked")); }
         }
 
-        // --- 핵심 로직 ---
+        function playEliminatedGlitch() {
+            const el = document.getElementById('eliminated-text');
+            const original = "GOOD BYE";
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+            let frame = 0;
+            
+            el.innerText = "";
+
+            const interval = setInterval(() => {
+                const newText = original
+                    .split("")
+                    .map((char, i) => {
+                        if (char === " ") return " ";
+                        if (Math.random() < frame / 20) {
+                            return original[i];
+                        }
+                        return chars[Math.floor(Math.random() * chars.length)];
+                    })
+                    .join("");
+
+                el.innerText = newText;
+                frame++;
+
+                if (frame > 20) {
+                    clearInterval(interval);
+                    el.innerText = original;
+                }
+            }, 60);
+        }
+
         function handleJoin(role) {
             const nameInput = document.getElementById('nickname-input');
             const name = nameInput.value.trim();
             if (!name) return alert("닉네임을 입력해주세요.");
-
             me = { id: Date.now().toString(), name, role };
+            if (role === 'player') gameState.players.push({ ...me, isDead: false });
             
-            if (role === 'player') {
-                gameState.players.push({ ...me, isDead: false });
-            }
-
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.style.opacity = '0';
+            loginScreen.style.transition = 'opacity 0.5s ease';
             
-            document.getElementById('my-name').innerText = me.name;
-            document.getElementById('my-role').innerText = me.role;
-
-            render();
-            checkAutoLoad();
-        }
-
-        function checkAutoLoad() {
-            if (gameState.status === 'idle' && gameState.players.length > 0) {
-                setTimeout(autoLoadGame, 500);
-            }
-        }
-
-        function autoLoadGame() {
-            playSound('load');
-            gameState.status = 'loading';
-            gameState.bulletPosition = Math.floor(Math.random() * 6);
-            gameState.currentChamber = 0;
-            gameState.currentPlayerIndex = 0;
-            gameState.turnResult = null;
-            render();
-
             setTimeout(() => {
-                gameState.status = 'waiting';
-                render();
-            }, 2500);
-        }
-
-        // --- 수정된 핵심 로직 ---
-
-        // 1. 'Start' 버튼 클릭 시 시작 (자동 로드 제거)
-        function startGame() {
-            if (gameState.status !== 'idle') return;
-            
-            playSound('load');
-            gameState.status = 'loading';
-            gameState.bulletPosition = Math.floor(Math.random() * 6);
-            gameState.currentChamber = 0;
-            render();
-
-            // 2. 실린더 회전 시작 (처음엔 빠르게, 갈수록 느리게)
-            setTimeout(() => {
-                const gunImg = document.getElementById('gun-image');
-                gunImg.style.transform = "rotate(2520deg)"; // 7바퀴 회전
-                // CSS transition(5s cubic-bezier)에 의해 서서히 멈춤
-                
+                loginScreen.classList.add('hidden');
+                const gameScreen = document.getElementById('game-screen');
+                gameScreen.classList.remove('hidden');
+                gameScreen.style.opacity = '0';
                 setTimeout(() => {
-                    // 3. 이미지 전환 (1초 대기 후 Dissolve)
-                    gunImg.classList.add('fade-out');
-                    
-                    setTimeout(() => {
-                        gunImg.src = ASSETS.images.gun;
-                        gunImg.style.transform = "rotate(0deg)";
-                        gunImg.classList.remove('fade-out');
-                        gunImg.classList.add('fade-in');
-                        
-                        gameState.status = 'waiting';
-                        render();
-                    }, 1000); // 1초 대기 후 전환
-                }, 5500); // 회전이 거의 멈출 때쯤
+                    gameScreen.style.transition = 'opacity 0.8s ease';
+                    gameScreen.style.opacity = '1';
+                }, 50);
+                render();
             }, 500);
         }
 
-        // 4 & 5. 발사 시퀀스 (더 빠른 회전 및 확대 연출)
+        function startGame() {
+            if (gameState.status !== 'idle') return;
+            gameState.status = 'loading';
+            render();
+            playSound('load');
+
+            setTimeout(() => {
+                gameState.status = 'switching';
+                render();
+
+                setTimeout(() => {
+                    gameState.status = 'waiting';
+
+                    const weightedChambers = [0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4];
+                    const randomIndex = Math.floor(Math.random() * weightedChambers.length);
+                    gameState.bulletPosition = weightedChambers[randomIndex];
+                    
+                    gameState.currentChamber = 0;
+                    gameState.currentPlayerIndex = 0;
+
+                    const img = document.getElementById('gun-image');
+                    img.src = ASSETS.images.gun; 
+
+                    render(); 
+                }, 800);
+            }, 3500);
+        }
+
         function pullTrigger() {
             if (gameState.status !== 'waiting') return;
 
@@ -247,131 +255,193 @@
             gameState.status = 'spinning';
             render();
 
-            const gunImg = document.getElementById('gun-image');
-            // 총이 더 빨리 돌아가는 연출 (짧은 시간 내 회전)
-            gunImg.style.transition = "transform 1.5s cubic-bezier(0.4, 0, 0.2, 1)";
-            gunImg.style.transform = "rotate(1080deg)";
-
             setTimeout(() => {
-                // 5. 멈추고 2초 뒤 총구 겨누기 (확대)
+            // 👇 1초 대기 상태 추가 (아무것도 안 하는 정지 느낌)
+                gameState.status = 'pre-zoom';
+
                 setTimeout(() => {
-                    playSound('cock');
-                    gameState.status = 'aiming';
-                    gunImg.classList.add('aim-zoom');
+                    gameState.status = 'zooming';
                     render();
 
-                    // 결과 발표
                     setTimeout(() => {
-                        const isDead = gameState.currentChamber === gameState.bulletPosition;
-                        
-                        if (isDead) {
-                            playSound('bang');
-                            gameState.players[gameState.currentPlayerIndex].isDead = true;
-                            gameState.status = 'resolved';
-                            gameState.turnResult = 'dead';
-                        } else {
-                            playSound('click');
-                            gameState.status = 'resolved';
-                            gameState.turnResult = 'alive';
-                            gameState.currentChamber++;
-                            // 다음 플레이어 계산 로직...
-                        }
+                        playSound('cock');
+                        gameState.status = 'aiming';
                         render();
-                        
-                        // 생존 시 다음 턴으로
-                        if (gameState.turnResult === 'alive') {
-                            setTimeout(() => {
-                                gunImg.classList.remove('aim-zoom');
-                                gameState.status = 'waiting';
-                                gameState.turnResult = null;
-                                render();
-                            }, 2000);
-                        }
-                    }, 1500); // 조준 후 결과까지 대기
-                }, 2000); // 멈춘 뒤 2초 대기
-            }, 1500);
+
+                        setTimeout(() => {
+                            const isDead = gameState.currentChamber === gameState.bulletPosition;
+
+                            if (isDead) {
+                                playSound('bang');
+                                gameState.players[gameState.currentPlayerIndex].isDead = true;
+                                gameState.turnResult = 'dead';
+                            } else {
+                                playSound('click');
+                                let nextIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                                while (gameState.players[nextIndex].isDead) {
+                                    nextIndex = (nextIndex + 1) % gameState.players.length;
+                                }
+                                gameState.currentPlayerIndex = nextIndex;
+                                gameState.currentChamber++;
+                                gameState.turnResult = 'alive';
+                            }
+
+                            gameState.status = 'resolved';
+                            render(); 
+
+                            if (isDead) {
+                                playEliminatedGlitch();
+                            }
+
+                            if (gameState.turnResult === 'alive') {
+                                setTimeout(() => {
+                                    gameState.status = 'waiting';
+                                    gameState.turnResult = null;
+                                    render();
+                                }, 2000);
+                            }
+                        }, 5000);
+                    }, 3000);
+                }, 1000);
+            }, 3500);
         }
 
         function resetRound() {
             gameState.status = 'idle';
             render();
-            checkAutoLoad();
         }
 
-        // --- 렌더링 함수 (UI 업데이트) ---
         function render() {
             const statusContainer = document.getElementById('status-container');
             const gunImage = document.getElementById('gun-image');
             const controlArea = document.getElementById('control-area');
             const playerList = document.getElementById('player-list');
             const deathOverlay = document.getElementById('death-overlay');
+            const aimingImage = document.getElementById('aiming-image');
+            
             const currentPlayer = gameState.players[gameState.currentPlayerIndex];
             const isMyTurn = me && me.role === 'player' && currentPlayer && currentPlayer.id === me.id;
 
-            // 1. 플레이어 목록 업데이트
             playerList.innerHTML = gameState.players.map((p, idx) => {
                 const isCurrent = idx === gameState.currentPlayerIndex && !p.isDead;
                 return `
-                    <li class="flex items-center p-2 rounded-lg ${isCurrent ? 'bg-white/5 border border-white/10' : ''}">
-                        <div class="w-2 h-2 rounded-full mr-3 ${p.isDead ? 'bg-gray-700' : (isCurrent ? 'bg-[#d4af37] shadow-[0_0_10px_#d4af37]' : 'bg-green-500/50')}"></div>
-                        <span class="text-sm font-medium truncate flex-1 ${p.isDead ? 'text-gray-600 line-through' : (isCurrent ? 'text-white' : 'text-gray-300')}">${p.name}</span>
-                        ${p.id === me?.id ? '<span class="text-[10px] text-[#d4af37] ml-2 border border-[#d4af37]/30 px-1.5 rounded uppercase">Me</span>' : ''}
-                    </li>
-                `;
-            }).join('') || '<li class="text-xs text-gray-500 text-center py-4 tracking-widest">WAITING...</li>';
+                    <li class="flex items-center px-4 py-2.5 rounded-md transition-all ${isCurrent ? 'bg-white/5 border border-white/5' : ''}">
+                        <span class="text-sm font-light flex-1 ${p.isDead ? 'text-white/20 line-through' : (isCurrent ? 'text-white' : 'text-white/50')}">${p.name}</span>
+                        ${isCurrent && !p.isDead ? '<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>' : ''}
+                        ${p.id === me?.id ? '<span class="text-[9px] text-[#d4af37] ml-2 border border-[#d4af37]/30 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Me</span>' : ''}
+                    </li>`;
+            }).join('') || '<li class="text-xs text-white/30 text-center py-4 tracking-widest font-light">WAITING FOR PLAYERS</li>';
 
-            // 2. 상태 텍스트 및 애니메이션 업데이트
+            gunImage.classList.remove(
+                'animate-spin-decelerate',
+                'zoom-in',
+                'zoom-out',
+                'cylinder-idle',
+                'cylinder-active',
+                'fade-out',
+                'gun-dimmed'
+            );
+
+            // 👇 이거 추가 (핵심)
+            gunImage.offsetHeight;
+
+            aimingImage.classList.remove('aiming-show');
+
             let statusHtml = '';
-            gunImage.className = "w-full h-full object-contain transition-all duration-300";
-            
-            if (gameState.status === 'idle') {
-                statusHtml = `<h2 class="text-xl text-gray-500 tracking-[0.3em] uppercase">Ready to start</h2>`;
-                gunImage.src = ASSETS.images.cylinder;
-                gunImage.classList.add('opacity-50', 'grayscale');
-            } else if (gameState.status === 'loading') {
-                statusHtml = `<h2 class="text-2xl text-[#d4af37] font-light tracking-[0.4em] uppercase animate-pulse">Loading Chamber</h2>`;
-                gunImage.src = ASSETS.images.cylinder;
-                gunImage.classList.add('animate-spin-fast', 'scale-110');
-            } else if (gameState.status === 'waiting') {
-                statusHtml = `
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm text-gray-400 tracking-[0.2em] mb-1">CURRENT TURN</span>
-                        <h2 class="text-3xl font-black tracking-widest text-white">${currentPlayer?.name || ''}</h2>
-                    </div>`;
-                gunImage.src = ASSETS.images.gun;
-            } else if (gameState.status === 'spinning') {
-                statusHtml = `<h2 class="text-3xl font-light text-red-500 tracking-[0.5em] animate-pulse">SPINNING</h2>`;
-                gunImage.src = ASSETS.images.gun;
-                gunImage.classList.add('animate-spin-slow');
-            } else if (gameState.status === 'aiming') {
-                statusHtml = `<h2 class="text-3xl font-black text-red-600 tracking-[0.8em]">LOCKED</h2>`;
-                gunImage.src = ASSETS.images.gun;
-                gunImage.classList.add('scale-125');
-            } else if (gameState.status === 'resolved' && gameState.turnResult === 'alive') {
-                statusHtml = `<h2 class="text-4xl font-light text-gray-400 tracking-[0.3em]">CLICK <span class="text-xs text-green-500 ml-2">SURVIVED</span></h2>`;
-                gunImage.src = ASSETS.images.gun;
+            if (gameState.status === 'spinning') {
+                gunImage.classList.remove('animate-spin-decelerate');
+                gunImage.offsetHeight;
             }
+            switch (gameState.status) {
+                case 'pre-zoom':
+                    return; 
+                case 'idle':
+                    statusHtml = `<h2 class="text-sm font-light text-white/40 tracking-[0.5em] uppercase">Standby</h2>`;
+                    gunImage.classList.add('cylinder-idle');
+                    gunImage.src = ASSETS.images.cylinder; 
+                    break;
+                case 'loading':
+                    statusHtml = `<h2 class="text-lg text-white/80 font-light tracking-[0.4em] uppercase animate-pulse">Chambering</h2>`;
+                    gunImage.classList.add('cylinder-active', 'animate-spin-decelerate');
+                    break;
+                case 'switching':
+                    gunImage.classList.add('fade-out');
+                    break;
+                case 'waiting':
+                    statusHtml = `
+                        <div class="flex flex-col items-center opacity-0 animate-[fadeIn_0.5s_ease_forwards]">
+                            <span class="text-[9px] text-[#d4af37] tracking-[0.3em] uppercase mb-2 font-light">Current Turn</span>
+                            <h2 class="text-2xl font-light tracking-[0.2em] text-white">${currentPlayer?.name || ''}</h2>
+                        </div>`;
+                    gunImage.src = ASSETS.images.gun; 
+                    gunImage.classList.add('cylinder-active', 'zoom-out');
+                    break;
+                case 'spinning':
+                    statusHtml = `<h2 class="text-xl font-light text-white/60 tracking-[0.4em] animate-pulse">Spinning</h2>`;
+                    gunImage.classList.add('cylinder-active', 'animate-spin-decelerate');
+                    break;
+                case 'zooming':
+                    statusHtml = `<div class="w-1.5 h-1.5 bg-white/50 rounded-full animate-ping"></div>`;
+                    gunImage.classList.add('cylinder-active', 'zoom-in');
+                    break;
+                case 'aiming':
+                    statusHtml = `<h2 class="text-sm font-light text-red-500/80 tracking-[0.6em] uppercase">Target Locked</h2>`;
+                    gunImage.classList.add('cylinder-active', 'zoom-in', 'gun-dimmed');
+                    aimingImage.classList.add('aiming-show');
+                    break;
+                case 'resolved':
+                    if (gameState.turnResult === 'alive') {
+                        statusHtml = `<h2 class="text-2xl font-light text-white/50 tracking-[0.4em] uppercase">Clear</h2>`;
+                        gunImage.classList.add('cylinder-active', 'zoom-out');
+                    }
+                    break;
+            }
+
             statusContainer.innerHTML = statusHtml;
 
-            // 3. 버튼 영역 업데이트
+            // 탄창(약실) 상태 업데이트 로직 추가
+            const bulletIndicator = document.getElementById('bullet-indicator');
+            if (bulletIndicator) {
+                let dotsHtml = '';
+                // 리볼버 약실은 기본 6개
+                for (let i = 0; i < 6; i++) {
+                    if (gameState.status === 'resolved' && gameState.turnResult === 'dead' && i === gameState.currentChamber) {
+                        // 이번 턴에 발사된 총알 (사망) - 붉은색 원
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] transition-all"></div>';
+                    } else if (i < gameState.currentChamber) {
+                        // 무사히 지나간 빈 약실 - 테두리만 있는 빈 원
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full border border-white/20 bg-transparent transition-all"></div>';
+                    } else {
+                        // 아직 확인되지 않은 남은 약실 - 하얀색 꽉 찬 원
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full bg-white/60 shadow-[0_0_5px_rgba(255,255,255,0.3)] transition-all"></div>';
+                    }
+                }
+                bulletIndicator.innerHTML = dotsHtml;
+            }
+
             controlArea.innerHTML = '';
-            if (me.role === 'player') {
-                if (gameState.status === 'waiting' && isMyTurn) {
+            if (me && me.role === 'player') {
+                if (gameState.status === 'idle' && gameState.players.length > 0) {
                     const btn = document.createElement('button');
-                    btn.className = "group relative bg-gradient-to-b from-[#8a1111] to-[#3a0303] text-white font-black text-2xl tracking-[0.3em] py-5 px-16 rounded-full shadow-2xl border border-red-500/50 transform hover:scale-105 active:scale-95 transition-all";
-                    btn.innerHTML = `<span class="relative z-10">FIRE</span>`;
+                    btn.className = "bg-white text-black font-semibold py-3.5 px-10 rounded-lg tracking-[0.2em] text-xs uppercase hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]";
+                    btn.innerText = "Initialize";
+                    btn.onclick = startGame;
+                    controlArea.appendChild(btn);
+                } else if (gameState.status === 'waiting' && isMyTurn) {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-red-900/20 text-red-500 border border-red-900/50 font-light text-lg tracking-[0.4em] py-4 px-14 rounded-lg hover:bg-red-900/40 hover:text-white transition-all backdrop-blur-sm";
+                    btn.innerText = "FIRE";
                     btn.onclick = pullTrigger;
                     controlArea.appendChild(btn);
                 } else if (gameState.status === 'resolved' && gameState.turnResult === 'dead') {
                     const btn = document.createElement('button');
-                    btn.className = "z-[110] bg-transparent border border-[#d4af37]/50 text-[#d4af37] hover:bg-[#d4af37]/10 font-bold py-4 px-10 rounded-full tracking-[0.2em] uppercase transition-all backdrop-blur-md";
-                    btn.innerText = "Prepare Next Round";
+                    btn.className = "z-[110] border border-[#d4af37]/50 text-[#d4af37] py-3.5 px-8 rounded-lg tracking-[0.15em] text-xs uppercase hover:bg-[#d4af37]/10 transition-all font-light";
+                    btn.innerText = "Reset System";
                     btn.onclick = resetRound;
                     controlArea.appendChild(btn);
                 }
             }
 
-            // 4. 사망 연출 (Bang!)
             if (gameState.status === 'resolved' && gameState.turnResult === 'dead') {
                 deathOverlay.classList.remove('hidden');
                 createBloodSplatter();
@@ -383,23 +453,27 @@
         function createBloodSplatter() {
             const container = document.getElementById('blood-splatter');
             container.innerHTML = '';
-            for (let i = 0; i < 20; i++) {
-                const size = Math.random() * 300 + 100;
+            for (let i = 0; i < 15; i++) {
+                const size = Math.random() * 200 + 50;
                 const drop = document.createElement('div');
                 drop.style.position = 'absolute';
-                drop.style.backgroundColor = '#500000';
+                drop.style.backgroundColor = '#4a0404'; 
                 drop.style.top = `${Math.random() * 100}%`;
                 drop.style.left = `${Math.random() * 100}%`;
                 drop.style.width = `${size}px`;
                 drop.style.height = `${size}px`;
-                drop.style.opacity = Math.random() * 0.7 + 0.3;
+                drop.style.opacity = Math.random() * 0.4 + 0.1;
                 drop.style.borderRadius = '50%';
-                drop.style.filter = `blur(${Math.random() * 10 + 5}px)`;
-                drop.style.transform = `scale(${Math.random() * 1.5 + 0.5}) skew(${Math.random() * 45}deg)`;
-                drop.style.transition = 'none';
+                drop.style.filter = `blur(${Math.random() * 15 + 10}px)`;
                 container.appendChild(drop);
             }
         }
     </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </body>
 </html>
