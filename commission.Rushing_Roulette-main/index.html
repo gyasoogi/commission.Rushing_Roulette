@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP ROULETTE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030303;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        img {
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            pointer-events: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+
+        @keyframes custom-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(3600deg); }
+        }
+        
+        .animate-spin-decelerate {
+            animation: custom-spin 3.5s cubic-bezier(0.15, 0, 0.15, 1) forwards;
+        }
+
+        #aiming-image { transition: opacity 0.6s ease-in-out; }
+        .aiming-show { opacity: 1 !important; }
+
+        .zoom-in { transform: scale(1.3) translateY(-10px); }
+        .zoom-out { transform: scale(1) translateY(0); }
+
+        #gun-image {
+            transition: opacity 0.8s ease-in-out, 
+                        transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                        filter 0.8s ease-in-out; 
+            transform-origin: center center;
+            will-change: transform, opacity, filter;
+        }
+
+        .cylinder-idle { opacity: 0.3; filter: grayscale(100%) brightness(0.6); }
+        .cylinder-active { opacity: 1; filter: grayscale(0%) brightness(1) drop-shadow(0 0 20px rgba(255,0,0,0.1)); }
+
+        .fade-out { opacity: 0 !important; }
+        .gun-dimmed { opacity: 0.8 !important; }
+
+        #death-overlay { transition: background-color 0.5s ease, backdrop-filter 0.5s ease; }
+
+        .noise-bg {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
+
+    <div id="login-screen" class="min-h-screen bg-[#030303] noise-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[50rem] bg-gradient-to-tr from-red-900/5 to-amber-900/5 rounded-full blur-[100px] pointer-events-none"></div>
+        
+        <div class="relative z-10 w-full max-w-sm bg-[#0a0a0c]/80 backdrop-blur-3xl border border-white/20 rounded-2xl p-12 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
+            <div class="text-center mb-10">
+                <h2 class="text-[#d43737] text-[9px] tracking-[0.4em] font-light mb-4 uppercase opacity-70">VIP Lounge</h2>
+                <h1 class="text-3xl font-light tracking-[0.2em] text-white">
+                    ROULETTE
+                </h1>
+            </div>
+            <div class="space-y-8">
+                <div class="relative">
+                    <input type="text" id="nickname-input" class="w-full bg-white/[0.03] border border-white/10 rounded-lg text-white px-4 py-3.5 outline-none focus:border-[#9e9e9e]/50 focus:bg-white/[0.05] transition-all text-center text-sm font-light tracking-widest placeholder-white/20 shadow-inner" placeholder="ENTER NICKNAME" maxlength="10">
+                </div>
+                <div class="flex flex-col gap-3">
+                    <button onclick="handleJoin('player')" class="w-full bg-white text-black hover:bg-gray-200 font-semibold py-3.5 rounded-lg transition-all tracking-[0.15em] text-xs uppercase shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                        Join Game
+                    </button>
+                    <button onclick="handleJoin('spectator')" class="w-full bg-transparent border border-white/25 hover:bg-white/10 text-gray-300 font-light py-3 rounded-lg transition-all tracking-[0.15em] uppercase text-xs">
+                        Spectate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden h-[100dvh] w-full relative overflow-hidden bg-[#030303] noise-bg">
+        <div class="fixed inset-0 bg-[radial-gradient(circle_at_center,_#0a0808_0%,_#030303_100%)] pointer-events-none"></div>
+
+        <header class="absolute top-6 left-6 right-6 z-50 flex justify-between items-start pointer-events-none">
+            <div class="w-[280px] bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/[0.05] rounded-3xl p-5 shadow-2xl pointer-events-auto relative">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-white/40 text-[10px] font-light tracking-[0.3em] uppercase">Roster</span>
+                    </div>
+                </div>
+                <ul id="player-list" class="space-y-2 max-h-[20vh] overflow-y-auto custom-scrollbar pr-2 text-sm"></ul>
+                
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <span class="text-white/40 text-[10px] font-light tracking-[0.3em] uppercase mb-3 flex justify-between items-center">
+                        Spectators <span id="spectator-count" class="bg-white/10 px-1.5 py-0.5 rounded text-white/80">0</span>
+                    </span>
+                    <ul id="spectator-list" class="space-y-1 max-h-[15vh] overflow-y-auto custom-scrollbar pr-2 text-xs"></ul>
+                </div>
+            </div>
+
+            <div class="bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/[0.05] rounded-full px-6 py-3 flex items-center gap-3 pointer-events-auto shadow-2xl h-fit">
+                <span class="text-[#9e9e9e] text-[10px] uppercase tracking-[0.2em] font-light mr-2">CHAMBERS</span>
+                <div id="bullet-indicator" class="flex items-center gap-2"></div>
+            </div>
+        </header>
+
+        <main class="relative z-10 w-full h-full flex flex-col items-center justify-center p-4 overflow-hidden">
+            <div class="w-full flex flex-col items-center translate-y-[7vh]">
+                <div id="status-container" class="min-h-[4rem] flex items-center justify-center text-center px-4 w-full mb-4"></div>
+
+                <div class="relative w-[45vmin] h-[45vmin] max-w-[320px] max-h-[320px] flex items-center justify-center transition-all duration-700 shrink-0">
+                    <div class="absolute inset-0 bg-white/[0.02] rounded-full blur-2xl mix-blend-screen pointer-events-none"></div>
+                    <img id="gun-image" src="assets/images/cylinder.png" class="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.9)]" alt="Gun">
+                    <img id="aiming-image" src="assets/images/aim.png" class="absolute w-[120%] h-[120%] object-contain opacity-0 pointer-events-none transition-opacity duration-700">
+                </div>
+
+                <div id="control-area" class="min-h-[6rem] flex items-center justify-center w-full px-6 mt-4 pointer-events-auto"></div>
+            </div>
+        </main>
+
+        <div id="system-controls" class="absolute bottom-6 right-6 z-50 pointer-events-auto"></div>
+
+        <div id="death-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none bg-[#030303]/95 backdrop-blur-sm">
+            <div id="blood-splatter" class="absolute inset-0 overflow-hidden mix-blend-multiply opacity-60"></div>
+            <div id="eliminated-text-container" class="relative z-10 flex flex-col items-center hidden">
+                <div class="w-20 h-[1px] bg-red-600/50 mb-6"></div>
+                <h1 id="eliminated-text" class="text-[5.5rem] font-light text-red-600 tracking-[0.2em] uppercase mb-2" style="text-shadow: 0 0 40px rgba(220,38,38,0.3); font-variant-numeric: tabular-nums;">
+                    GOOD BYE
+                </h1>
+                <h2 id="custom-death-text" class="text-2xl font-bold text-red-500 tracking-widest mt-2 uppercase text-center" style="text-shadow: 0 0 20px rgba(220,38,38,0.5);"></h2>
+                <div class="w-20 h-[1px] bg-red-600/50 mt-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ASSETS = {
+            images: { gun: 'assets/images/gun.png', cylinder: 'assets/images/cylinder.png', aim: 'assets/images/aim.png', unaim: 'assets/images/unaim.png' },
+            sounds: { 
+                cylinder_spin: 'assets/sounds/cylinder_spin.mp3',
+                revolver_spin: 'assets/sounds/revolver_spin.mp3',
+                cock: 'assets/sounds/cock.mp3', 
+                click: 'assets/sounds/click.mp3', 
+                bang: 'assets/sounds/bang.mp3', 
+                heartbeat: 'assets/sounds/heartbeat.mp3' 
+            }
+        };
+
+        let me = null;
+        let lastHandledDeathId = null; 
+        
+        window.gameState = {
+            status: 'idle', 
+            players: [],
+            spectators: [], 
+            currentPlayerIndex: 0,
+            bulletPositions: [], 
+            currentChamber: 0,
+            maxChambers: 6,      
+            bulletCount: 1,      
+            deathMessage: '',    
+            turnResult: null,
+            lastSound: null
+        };
+
+        const audios = {};
+        Object.entries(ASSETS.sounds).forEach(([key, url]) => { audios[key] = new Audio(url); });
+
+        window.playSound = function(type) {
+            const sound = audios[type];
+            if (sound) { sound.currentTime = 0; sound.play().catch(e => console.log("Audio play blocked", e)); }
+        };
+
+        window.updateGame = function(newState) {
+            if(window.dbSet && window.gameRef) {
+                window.dbSet(window.gameRef, newState);
+            } else {
+                window.gameState = newState;
+                window.render();
+            }
+        };
+
+        window.kickPlayer = function(playerId) {
+            if (!me || !me.isSystem) return;
+            let newState = { ...window.gameState };
+            
+            newState.players = (newState.players || []).filter(p => p.id !== playerId);
+            newState.spectators = (newState.spectators || []).filter(s => s.id !== playerId);
+            
+            const hasRealPlayers = newState.players.some(p => !p.isSystem);
+            if (!hasRealPlayers && newState.status !== 'idle') {
+                newState.status = 'idle';
+                newState.turnResult = null;
+                newState.bulletPositions = [];
+                newState.currentChamber = 0;
+                newState.spectators = []; 
+            }
+            window.updateGame(newState);
+        };
+
+        window.forceResetRoom = function() {
+            if (!me || !me.isSystem) return;
+            let newState = {
+                status: 'idle', 
+                players: [me], 
+                spectators: [], 
+                currentPlayerIndex: 0,
+                bulletPositions: [],
+                currentChamber: 0,
+                maxChambers: window.gameState.maxChambers || 6,
+                bulletCount: window.gameState.bulletCount || 1,
+                deathMessage: window.gameState.deathMessage || '',
+                turnResult: null,
+                lastSound: null
+            };
+            window.updateGame(newState);
+        };
+
+        function playEliminatedGlitch() {
+            const el = document.getElementById('eliminated-text');
+            const original = "GOOD BYE";
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+            let frame = 0;
+            
+            el.innerText = "";
+            const interval = setInterval(() => {
+                const newText = original
+                    .split("")
+                    .map((char, i) => {
+                        if (char === " ") return " ";
+                        if (Math.random() < frame / 20) return original[i];
+                        return chars[Math.floor(Math.random() * chars.length)];
+                    })
+                    .join("");
+
+                el.innerText = newText;
+                frame++;
+
+                if (frame > 20) {
+                    clearInterval(interval);
+                    el.innerText = original;
+                }
+            }, 60);
+        }
+
+        function handleJoin(role) {
+            const nameInput = document.getElementById('nickname-input');
+            const name = nameInput.value.trim();
+            if (!name) return alert("닉네임을 입력해주세요.");
+            
+            const isSystem = name === 'SYSTEM';
+            me = { id: Date.now().toString(), name, role, isSystem, joinTime: Date.now() };
+            
+            let newState = { ...window.gameState };
+            
+            if (role === 'player') {
+                if (!newState.players) newState.players = [];
+                if (isSystem) newState.players.unshift({ ...me, isDead: false });
+                else newState.players.push({ ...me, isDead: false });
+            } else if (role === 'spectator') {
+                if (!newState.spectators) newState.spectators = [];
+                newState.spectators.push({ ...me });
+            }
+            
+            window.updateGame(newState); 
+
+            if (window.setupPresence) {
+                window.setupPresence(me.id);
+            }
+            
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.style.opacity = '0';
+            loginScreen.style.transition = 'opacity 0.5s ease';
+            
+            setTimeout(() => {
+                loginScreen.classList.add('hidden');
+                const gameScreen = document.getElementById('game-screen');
+                gameScreen.classList.remove('hidden');
+                gameScreen.style.opacity = '0';
+                setTimeout(() => {
+                    gameScreen.style.transition = 'opacity 0.8s ease';
+                    gameScreen.style.opacity = '1';
+                }, 50);
+                window.render();
+            }, 500);
+        }
+
+        window.saveAndStartGame = function() {
+            const chambers = parseInt(document.getElementById('sys-chambers').value) || 6;
+            const bullets = parseInt(document.getElementById('sys-bullets').value) || 1;
+            const msg = document.getElementById('sys-msg').value || '';
+
+            if (bullets >= chambers) {
+                alert("실탄 수는 약실 수보다 적어야 합니다.");
+                return;
+            }
+
+            let newState = { ...window.gameState };
+            newState.maxChambers = chambers;
+            newState.bulletCount = bullets;
+            newState.deathMessage = msg;
+            window.updateGame(newState);
+
+            startGame();
+        }
+
+        function startGame() {
+            if (window.gameState.status !== 'idle') return;
+            
+            const hasRealPlayer = window.gameState.players.some(p => !p.isSystem && !p.isDead);
+            if (!hasRealPlayer) {
+                alert("게임을 진행할 실제 플레이어가 없습니다.");
+                return;
+            }
+
+            let newState = { ...window.gameState };
+            newState.status = 'loading';
+            newState.lastSound = { sound: 'cylinder_spin', timestamp: Date.now() };
+            window.updateGame(newState);
+
+            setTimeout(() => {
+                newState.status = 'switching';
+                window.updateGame(newState);
+
+                setTimeout(() => {
+                    newState.status = 'waiting';
+                    
+                    let positions = [];
+                    while (positions.length < (newState.bulletCount || 1)) {
+                        let r = Math.floor(Math.random() * (newState.maxChambers || 6));
+                        if (!positions.includes(r)) positions.push(r);
+                    }
+                    
+                    newState.bulletPositions = positions;
+                    newState.currentChamber = 0;
+                    newState.currentPlayerIndex = newState.players.findIndex(p => !p.isSystem && !p.isDead);
+
+                    window.updateGame(newState); 
+                }, 800);
+            }, 3500);
+        }
+
+        function pullTrigger() {
+            if (window.gameState.status !== 'waiting') return;
+
+            let newState = { ...window.gameState };
+            newState.status = 'spinning';
+            newState.lastSound = { sound: 'revolver_spin', timestamp: Date.now() };
+            window.updateGame(newState);
+
+            setTimeout(() => {
+                newState.status = 'pre-zoom';
+                window.updateGame(newState);
+
+                setTimeout(() => {
+                    newState.status = 'zooming';
+                    newState.lastSound = { sound: 'heartbeat', timestamp: Date.now() }; 
+                    window.updateGame(newState);
+
+                    setTimeout(() => {
+                        newState.status = 'aiming';
+                        newState.lastSound = { sound: 'cock', timestamp: Date.now() };
+                        window.updateGame(newState);
+
+                        setTimeout(() => {
+                            const isDead = (newState.bulletPositions || []).includes(newState.currentChamber);
+
+                            if (isDead) {
+                                newState.players[newState.currentPlayerIndex].isDead = true;
+                                newState.turnResult = 'dead';
+                                newState.lastSound = { sound: 'bang', timestamp: Date.now() };
+                            } else {
+                                newState.currentChamber++;
+                                newState.turnResult = 'alive';
+                                newState.lastSound = { sound: 'click', timestamp: Date.now() };
+                            }
+
+                            newState.status = 'resolved';
+                            window.updateGame(newState);
+
+                            if (newState.turnResult === 'alive') {
+                                setTimeout(() => {
+                                    let activeState = { ...window.gameState };
+                                    let nextIndex = (activeState.currentPlayerIndex + 1) % activeState.players.length;
+                                    while (activeState.players[nextIndex].isDead || activeState.players[nextIndex].isSystem) {
+                                        nextIndex = (nextIndex + 1) % activeState.players.length;
+                                    }
+                                    activeState.currentPlayerIndex = nextIndex;
+                                    activeState.status = 'waiting';
+                                    activeState.turnResult = null;
+                                    window.updateGame(activeState);
+                                }, 2000);
+                            } 
+                            else if (newState.turnResult === 'dead') {
+                                const remainingBullets = (newState.bulletPositions || []).filter(pos => pos > newState.currentChamber).length;
+                                if (remainingBullets > 0) {
+                                    setTimeout(() => {
+                                        let activeState = { ...window.gameState };
+                                        const aliveCount = activeState.players.filter(p => !p.isSystem && !p.isDead).length;
+                                        if (aliveCount > 0) {
+                                            let nextIndex = (activeState.currentPlayerIndex + 1) % activeState.players.length;
+                                            while (activeState.players[nextIndex].isDead || activeState.players[nextIndex].isSystem) {
+                                                nextIndex = (nextIndex + 1) % activeState.players.length;
+                                            }
+                                            activeState.currentPlayerIndex = nextIndex;
+                                            activeState.currentChamber++; 
+                                            activeState.status = 'waiting';
+                                            activeState.turnResult = null;
+                                            window.updateGame(activeState);
+                                        }
+                                    }, 4000); 
+                                }
+                            }
+                        }, 5000);
+                    }, 3000); 
+                }, 1000);
+            }, 3500);
+        }
+
+        window.render = function() {
+            const statusContainer = document.getElementById('status-container');
+            const gunImage = document.getElementById('gun-image');
+            const controlArea = document.getElementById('control-area');
+            const systemControls = document.getElementById('system-controls');
+            const playerList = document.getElementById('player-list');
+            const spectatorList = document.getElementById('spectator-list');
+            const spectatorCount = document.getElementById('spectator-count');
+            const deathOverlay = document.getElementById('death-overlay');
+            const aimingImage = document.getElementById('aiming-image');
+            
+            const state = window.gameState;
+            const currentPlayer = state.players[state.currentPlayerIndex];
+            const isMyTurn = me && me.role === 'player' && currentPlayer && currentPlayer.id === me.id;
+
+            playerList.innerHTML = (state.players || []).map((p, idx) => {
+                const isCurrent = idx === state.currentPlayerIndex && !p.isDead && !p.isSystem;
+                const systemTag = p.isSystem ? '<span class="text-[9px] text-red-500 ml-2 border border-red-500/30 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SYSTEM</span>' : '';
+                const meTag = p.id === me?.id && !p.isSystem ? '<span class="text-[9px] text-[#d4af37] ml-2 border border-[#d4af37]/30 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Me</span>' : '';
+                const kickBtn = (me && me.isSystem) ? `<button onclick="window.kickPlayer('${p.id}')" class="text-[9px] text-red-400 border border-red-400/30 px-1.5 py-0.5 ml-2 rounded hover:bg-red-500/20 uppercase tracking-wider pointer-events-auto transition-all">추방</button>` : '';
+
+                const statusLight = p.isSystem ? '' : (p.isDead 
+                    ? '<div class="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.8)] ml-2 shrink-0"></div>' 
+                    : '<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)] ml-2 shrink-0"></div>');
+
+                return `
+                    <li class="flex items-center px-4 py-2.5 rounded-md transition-all ${isCurrent ? 'bg-white/5 border border-white/5' : ''}">
+                        <span class="text-sm font-light flex-1 ${p.isDead ? 'text-white/20 line-through' : (isCurrent ? 'text-white' : 'text-white/50')}">${p.name}</span>
+                        ${statusLight}
+                        ${systemTag}
+                        ${meTag}
+                        ${kickBtn}
+                    </li>`;
+            }).join('') || '<li class="text-xs text-white/30 text-center py-4 tracking-widest font-light">WAITING FOR PLAYERS</li>';
+
+            const specs = state.spectators || [];
+            if (spectatorCount) spectatorCount.innerText = specs.length;
+            if (spectatorList) {
+                spectatorList.innerHTML = specs.map(s => {
+                    const meTag = s.id === me?.id ? '<span class="text-[9px] text-[#d4af37] ml-2 border border-[#d4af37]/30 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Me</span>' : '';
+                    const kickBtn = (me && me.isSystem) ? `<button onclick="window.kickPlayer('${s.id}')" class="text-[9px] text-red-400 border border-red-400/30 px-1.5 py-0.5 ml-2 rounded hover:bg-red-500/20 uppercase tracking-wider pointer-events-auto transition-all">추방</button>` : '';
+                    return `
+                        <li class="flex items-center px-2 py-1.5 rounded-md transition-all">
+                            <div class="w-1 h-1 rounded-full bg-white/30 mr-2 shrink-0"></div>
+                            <span class="text-xs font-light flex-1 text-white/40">${s.name}</span>
+                            ${meTag}
+                            ${kickBtn}
+                        </li>`;
+                }).join('') || '<li class="text-[10px] text-white/20 py-2 font-light text-center tracking-widest">NO SPECTATORS</li>';
+            }
+
+            if (me && me.isSystem) {
+                systemControls.innerHTML = `<button onclick="window.forceResetRoom()" class="bg-red-900/40 border border-red-500/50 text-white px-4 py-3 rounded-lg text-xs tracking-[0.2em] uppercase hover:bg-red-600/60 transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)]">방 전체 초기화</button>`;
+            } else {
+                systemControls.innerHTML = '';
+            }
+
+            gunImage.classList.remove(
+                'animate-spin-decelerate',
+                'zoom-in',
+                'zoom-out',
+                'cylinder-idle',
+                'cylinder-active',
+                'fade-out',
+                'gun-dimmed'
+            );
+
+            gunImage.offsetHeight;
+            aimingImage.classList.remove('aiming-show');
+
+            aimingImage.src = isMyTurn ? ASSETS.images.aim : ASSETS.images.unaim;
+
+            let statusHtml = '';
+            if (state.status === 'spinning') {
+                gunImage.classList.remove('animate-spin-decelerate');
+                gunImage.offsetHeight;
+            }
+
+            switch (state.status) {
+                case 'pre-zoom': return; 
+                case 'idle':
+                    statusHtml = `<h2 class="text-sm font-light text-white/40 tracking-[0.5em] uppercase">Standby</h2>`;
+                    gunImage.classList.add('cylinder-idle');
+                    gunImage.src = ASSETS.images.cylinder; 
+                    break;
+                case 'loading':
+                    statusHtml = `<h2 class="text-lg text-white/80 font-light tracking-[0.4em] uppercase animate-pulse">Chambering</h2>`;
+                    gunImage.classList.add('cylinder-active', 'animate-spin-decelerate');
+                    gunImage.src = ASSETS.images.cylinder; 
+                    break;
+                case 'switching':
+                    gunImage.classList.add('fade-out');
+                    break;
+                case 'waiting':
+                    statusHtml = `
+                        <div class="flex flex-col items-center opacity-0 animate-[fadeIn_0.5s_ease_forwards]">
+                            <span class="text-[9px] text-[#d4af37] tracking-[0.3em] uppercase mb-2 font-light">Current Turn</span>
+                            <h2 class="text-2xl font-light tracking-[0.2em] text-white">${currentPlayer?.name || ''}</h2>
+                        </div>`;
+                    gunImage.src = ASSETS.images.gun; 
+                    gunImage.classList.add('cylinder-active', 'zoom-out');
+                    break;
+                case 'spinning':
+                    statusHtml = `<h2 class="text-xl font-light text-white/60 tracking-[0.4em] animate-pulse">Spinning</h2>`;
+                    gunImage.src = ASSETS.images.gun; 
+                    gunImage.classList.add('cylinder-active', 'animate-spin-decelerate');
+                    break;
+                case 'zooming':
+                    statusHtml = `<div class="w-1.5 h-1.5 bg-white/50 rounded-full animate-ping"></div>`;
+                    gunImage.src = ASSETS.images.gun; 
+                    gunImage.classList.add('cylinder-active', 'zoom-in');
+                    break;
+                case 'aiming':
+                    statusHtml = `<h2 class="text-sm font-light text-red-500/80 tracking-[0.6em] uppercase">Target Locked</h2>`;
+                    gunImage.src = ASSETS.images.gun; 
+                    gunImage.classList.add('cylinder-active', 'zoom-in', 'gun-dimmed');
+                    aimingImage.classList.add('aiming-show'); 
+                    break;
+                case 'resolved':
+                    if (state.turnResult === 'alive') {
+                        statusHtml = `<h2 class="text-2xl font-light text-white/50 tracking-[0.4em] uppercase">Clear</h2>`;
+                        gunImage.src = ASSETS.images.gun; 
+                        gunImage.classList.add('cylinder-active', 'zoom-out');
+                    } else {
+                        gunImage.src = ASSETS.images.gun; 
+                    }
+                    break;
+            }
+
+            statusContainer.innerHTML = statusHtml;
+
+            const bulletIndicator = document.getElementById('bullet-indicator');
+            if (bulletIndicator) {
+                let dotsHtml = '';
+                const maxChambers = state.maxChambers || 6;
+                for (let i = 0; i < maxChambers; i++) {
+                    if (state.status === 'resolved' && state.turnResult === 'dead' && i === state.currentChamber) {
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)] transition-all shrink-0"></div>';
+                    } else if (i < state.currentChamber) {
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full border border-white/20 bg-transparent transition-all shrink-0"></div>';
+                    } else {
+                        dotsHtml += '<div class="w-2.5 h-2.5 rounded-full bg-white/60 shadow-[0_0_5px_rgba(255,255,255,0.3)] transition-all shrink-0"></div>';
+                    }
+                }
+                bulletIndicator.innerHTML = dotsHtml;
+            }
+
+            controlArea.innerHTML = '';
+            if (me && me.role === 'player') {
+                if (state.status === 'idle' && state.players.length > 0) {
+                    if (me.isSystem) {
+                        controlArea.innerHTML = `
+                            <div class="flex flex-col gap-4 w-full max-w-sm text-left bg-white/[0.02] p-5 rounded-xl border border-white/10">
+                                <div class="flex gap-4">
+                                    <div class="flex-1">
+                                        <label class="text-[10px] text-white/50 tracking-widest uppercase mb-1 block text-center">Chambers</label>
+                                        <input type="number" id="sys-chambers" value="${state.maxChambers || 6}" min="2" max="20" class="w-full bg-white/5 border border-white/20 rounded text-white px-3 py-2 outline-none text-center font-light">
+                                    </div>
+                                    <div class="flex-1">
+                                        <label class="text-[10px] text-white/50 tracking-widest uppercase mb-1 block text-center">Bullets</label>
+                                        <input type="number" id="sys-bullets" value="${state.bulletCount || 1}" min="1" max="19" class="w-full bg-white/5 border border-white/20 rounded text-white px-3 py-2 outline-none text-center font-light">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-white/50 tracking-widest uppercase mb-1 block text-center">Death Message</label>
+                                    <input type="text" id="sys-msg" value="${state.deathMessage || ''}" placeholder="Enter Custom Message" class="w-full bg-white/5 border border-white/20 rounded text-white px-3 py-2 outline-none text-center text-sm font-light">
+                                </div>
+                                <button onclick="window.saveAndStartGame()" class="mt-2 bg-white text-black font-semibold py-3 px-10 rounded-lg tracking-[0.2em] text-xs uppercase hover:bg-gray-200 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]">Apply & Start</button>
+                            </div>
+                        `;
+                    } else {
+                        const waitMsg = document.createElement('span');
+                        waitMsg.className = "text-xs font-light text-white/40 tracking-[0.2em] uppercase";
+                        waitMsg.innerText = "Waiting for System to start...";
+                        controlArea.appendChild(waitMsg);
+                    }
+                } else if (state.status === 'waiting' && isMyTurn && !me.isSystem) {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-red-900/20 text-red-500 border border-red-900/50 font-light text-lg tracking-[0.4em] py-4 px-14 rounded-lg hover:bg-red-900/40 hover:text-white transition-all backdrop-blur-sm";
+                    btn.innerText = "FIRE";
+                    btn.onclick = pullTrigger;
+                    controlArea.appendChild(btn);
+                } 
+            }
+
+            if (state.status === 'resolved' && state.turnResult === 'dead') {
+                deathOverlay.classList.remove('hidden');
+                const textContainer = document.getElementById('eliminated-text-container');
+                const customTextEl = document.getElementById('custom-death-text');
+                const bloodSplatter = document.getElementById('blood-splatter');
+                
+                const amIDeadPlayer = me && me.id === currentPlayer?.id;
+                const remainingBullets = (state.bulletPositions || []).filter(pos => pos > state.currentChamber).length;
+
+                if (amIDeadPlayer) {
+                    deathOverlay.style.backgroundColor = 'rgba(3, 3, 3, 0.95)';
+                    deathOverlay.style.backdropFilter = 'none';
+                    textContainer.classList.remove('hidden');
+                    customTextEl.innerText = state.deathMessage || "";
+
+                    const currentDeathId = `${state.currentPlayerIndex}-${state.currentChamber}`;
+                    if (lastHandledDeathId !== currentDeathId) {
+                        createBloodSplatter();
+                        playEliminatedGlitch();
+                        lastHandledDeathId = currentDeathId;
+                    }
+                } else {
+                    textContainer.classList.add('hidden');
+                    bloodSplatter.innerHTML = ''; 
+                    
+                    if (remainingBullets > 0) {
+                        deathOverlay.style.backgroundColor = 'rgba(220, 38, 38, 0.15)';
+                        deathOverlay.style.backdropFilter = 'none';
+                    } else {
+                        deathOverlay.style.backgroundColor = 'rgba(220, 38, 38, 0.3)';
+                        deathOverlay.style.backdropFilter = 'blur(8px)';
+                    }
+                    lastHandledDeathId = null;
+                }
+            } else {
+                deathOverlay.classList.add('hidden');
+                lastHandledDeathId = null; 
+            }
+        }
+
+        function createBloodSplatter() {
+            const container = document.getElementById('blood-splatter');
+            container.innerHTML = '';
+            for (let i = 0; i < 15; i++) {
+                const size = Math.random() * 200 + 50;
+                const drop = document.createElement('div');
+                drop.style.position = 'absolute';
+                drop.style.backgroundColor = '#4a0404'; 
+                drop.style.top = `${Math.random() * 100}%`;
+                drop.style.left = `${Math.random() * 100}%`;
+                drop.style.width = `${size}px`;
+                drop.style.height = `${size}px`;
+                drop.style.opacity = Math.random() * 0.4 + 0.1;
+                drop.style.borderRadius = '50%';
+                drop.style.filter = `blur(${Math.random() * 15 + 10}px)`;
+                container.appendChild(drop);
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
+        import { getDatabase, ref, onValue, set, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPm8wSP2PMvEziYDqXa_kKw-lQ4Np5jGg",
+            authDomain: "russian-roulette-af904.firebaseapp.com",
+            databaseURL: "https://russian-roulette-af904-default-rtdb.firebaseio.com/",
+            projectId: "russian-roulette-af904",
+            storageBucket: "russian-roulette-af904.firebasestorage.app",
+            messagingSenderId: "952272537002",
+            appId: "1:952272537002:web:fdcc528fc30925519117d3",
+            measurementId: "G-CY8KRDFELT"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app); 
+        const db = getDatabase(app); 
+
+        window.gameRef = ref(db, 'rooms/main_room/gameState');
+        window.dbSet = set; 
+
+        window.activePresence = {};
+        const presenceRef = ref(db, 'rooms/main_room/presence');
+        
+        window.setupPresence = function(uid) {
+            const myPresenceRef = ref(db, 'rooms/main_room/presence/' + uid);
+            set(myPresenceRef, true);
+            onDisconnect(myPresenceRef).remove();
+        };
+
+        window.checkAndCleanGhosts = function() {
+            if (!me) return;
+            const state = window.gameState;
+            if (!state || !state.players) return;
+
+            let isCleaner = false;
+            if (me.isSystem) {
+                isCleaner = true;
+            } else {
+                const firstReal = state.players.find(p => !p.isSystem);
+                if (firstReal && firstReal.id === me.id) isCleaner = true;
+            }
+
+            if (isCleaner) {
+                let changed = false;
+                let spectChanged = false;
+
+                let newPlayers = state.players.filter(p => {
+                    if (!window.activePresence[p.id]) {
+                        if (Date.now() - (p.joinTime || 0) > 10000) {
+                            changed = true;
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
+                let newSpectators = (state.spectators || []).filter(s => {
+                    if (!window.activePresence[s.id]) {
+                        if (Date.now() - (s.joinTime || 0) > 10000) {
+                            spectChanged = true;
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
+                if (changed || spectChanged) {
+                    let newState = { ...state, players: newPlayers, spectators: newSpectators };
+                    const hasRealPlayers = newPlayers.some(p => !p.isSystem);
+                    if (!hasRealPlayers && newState.status !== 'idle') {
+                        newState.status = 'idle';
+                        newState.turnResult = null;
+                        newState.bulletPositions = [];
+                        newState.currentChamber = 0;
+                        newState.spectators = []; 
+                    }
+                    window.updateGame(newState);
+                }
+            }
+        };
+
+        onValue(presenceRef, (snap) => {
+            window.activePresence = snap.val() || {};
+            window.checkAndCleanGhosts();
+        });
+
+        // ★ 첫 로드 시 이전 게임의 사운드가 재생되는 버그 방지
+        let isFirstLoad = true;
+
+        onValue(window.gameRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const prevSoundTime = window.gameState.lastSound?.timestamp;
+                
+                window.gameState = data;
+                if (!window.gameState.players) window.gameState.players = [];
+                if (!window.gameState.spectators) window.gameState.spectators = [];
+
+                if (me) {
+                    const isStillPlayer = window.gameState.players.some(p => p.id === me.id);
+                    const isStillSpectator = window.gameState.spectators.some(s => s.id === me.id);
+                    
+                    if (!isStillPlayer && !isStillSpectator) {
+                        window.location.reload();
+                        return; 
+                    }
+                }
+
+                // isFirstLoad가 false일 때만 사운드 재생
+                if (!isFirstLoad && window.gameState.lastSound && window.gameState.lastSound.timestamp !== prevSoundTime) {
+                    if (window.playSound) {
+                        window.playSound(window.gameState.lastSound.sound);
+                    }
+                }
+
+                if (typeof window.render === 'function') {
+                    window.render();
+                }
+                
+                window.checkAndCleanGhosts();
+                isFirstLoad = false; // 최초 1회 실행 후 false로 변경
+            }
+        });
+    </script>
+</body>
+</html>
