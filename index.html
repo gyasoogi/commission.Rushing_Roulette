@@ -105,20 +105,58 @@
     <div id="game-screen" class="hidden h-[100dvh] w-full relative overflow-hidden bg-[#030303] noise-bg">
         <div class="fixed inset-0 bg-[radial-gradient(circle_at_center,_#0a0808_0%,_#030303_100%)] pointer-events-none"></div>
 
-        <header class="absolute top-6 left-6 right-6 z-50 flex justify-between items-start pointer-events-none">
-            <div class="w-[280px] bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/[0.05] rounded-3xl p-5 shadow-2xl pointer-events-auto relative">
+        <header class="
+            absolute
+            top-[clamp(12px,2vh,24px)]
+            left-[clamp(12px,2vw,24px)]
+            right-[clamp(12px,2vw,24px)]
+            z-50
+            flex
+            justify-between
+            items-start
+            gap-4
+            pointer-events-none
+        ">
+            <div class="
+                w-[clamp(180px,22vw,280px)]
+                max-h-[clamp(220px,42vh,520px)]
+                bg-[#0a0a0c]/80
+                backdrop-blur-2xl
+                border border-white/[0.05]
+                rounded-[clamp(18px,2vw,28px)]
+                p-[clamp(12px,1.2vw,20px)]
+                shadow-2xl
+                pointer-events-auto
+                relative
+                flex flex-col
+            ">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-3">
                         <span class="text-white/40 text-[10px] font-light tracking-[0.3em] uppercase">Roster</span>
                     </div>
                 </div>
-                <ul id="player-list" class="space-y-2 max-h-[20vh] overflow-y-auto custom-scrollbar pr-2 text-sm"></ul>
+                <ul id="player-list" class="
+                    space-y-2
+                    flex-1
+                    min-h-0
+                    overflow-y-auto
+                    custom-scrollbar
+                    pr-2
+                    text-[clamp(11px,0.75vw,14px)]
+                "></ul>
                 
                 <div class="mt-4 pt-4 border-t border-white/10">
                     <span class="text-white/40 text-[10px] font-light tracking-[0.3em] uppercase mb-3 flex justify-between items-center">
                         Spectators <span id="spectator-count" class="bg-white/10 px-1.5 py-0.5 rounded text-white/80">0</span>
                     </span>
-                    <ul id="spectator-list" class="space-y-1 max-h-[15vh] overflow-y-auto custom-scrollbar pr-2 text-xs"></ul>
+                    <ul id="spectator-list" class="
+                        space-y-1
+                        max-h-[clamp(70px,14vh,160px)]
+                        overflow-y-auto
+                        custom-scrollbar
+                        pr-2
+                        text-[clamp(9px,0.65vw,12px)]
+                    "></ul>
                 </div>
             </div>
 
